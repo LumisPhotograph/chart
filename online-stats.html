@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>在线用户统计分析</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F4F6;
+  --card:#FFFFFF;
+  --border:#E5E7EB;
+  --text:#111827;
+  --text2:#6B7280;
+  --accent:#4F46E5;
+  --accent-light:#EEF2FF;
+  --accent-hover:#4338CA;
+  --danger:#EF4444;
+  --shadow:0 1px 3px rgba(0,0,0,0.07),0 4px 16px rgba(0,0,0,0.05);
+  --r:12px;
+  --r-sm:8px;
+}
+body{background:var(--bg);font-family:'Outfit',sans-serif;color:var(--text);min-height:100vh;padding-bottom:60px}
+a{color:inherit;text-decoration:none}
+
+/* ── HEADER ── */
+.header{background:var(--card);border-bottom:1px solid var(--border);padding:0 32px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(12px)}
+.header-title{display:flex;align-items:center;gap:10px;font-size:17px;font-weight:600;letter-spacing:-0.3px}
+.header-title svg{color:var(--accent)}
+.header-actions{display:flex;align-items:center;gap:8px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;height:36px;border-radius:var(--r-sm);font-family:'Outfit',sans-serif;font-size:13.5px;font-weight:500;cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-hover)}
+.btn-secondary{background:var(--card);color:var(--text);border:1.5px solid var(--border)}.btn-secondary:hover{border-color:var(--accent);color:var(--accent)}
+.btn-ghost{background:transparent;color:var(--text2);padding:0 10px}.btn-ghost:hover{color:var(--text);background:var(--bg)}
+.btn-sm{height:30px;padding:0 12px;font-size:12.5px;border-radius:6px}
+.btn-danger{background:#FEF2F2;color:var(--danger);border:1.5px solid #FECACA}.btn-danger:hover{background:#FEE2E2}
+
+/* ── MAIN LAYOUT ── */
+.main{max-width:1200px;margin:0 auto;padding:28px 24px;display:flex;flex-direction:column;gap:20px}
+
+/* ── CARDS ── */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--border)}
+.card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:600;color:var(--text)}
+.card-body{padding:20px}
+
+/* ── INPUT SECTION ── */
+.input-card .card-body{padding:20px;display:flex;flex-direction:column;gap:14px}
+.format-hint{font-size:12px;color:var(--text2);font-family:'DM Mono',monospace;background:var(--bg);border-radius:6px;padding:8px 12px;line-height:1.7}
+textarea{width:100%;height:130px;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:12px 14px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);resize:vertical;outline:none;transition:border-color .15s;background:#FAFAFA;line-height:1.6}
+textarea:focus{border-color:var(--accent);background:#fff}
+.input-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.input-group{display:flex;align-items:center;gap:8px}
+.input-label{font-size:13px;color:var(--text2);font-weight:500;white-space:nowrap}
+input[type="text"]{height:36px;padding:0 12px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:'Outfit',sans-serif;font-size:13.5px;color:var(--text);outline:none;transition:border-color .15s;min-width:140px}
+input[type="text"]:focus{border-color:var(--accent)}
+.radio-group{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px}
+.radio-option{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;user-select:none;color:var(--text2)}
+.radio-option input{display:none}
+.radio-option.active{background:var(--card);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.input-actions{display:flex;gap:8px;margin-left:auto}
+
+/* ── CHIPS ROW ── */
+.chips-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chips-label{font-size:12.5px;color:var(--text2);font-weight:500;white-space:nowrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 9px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid transparent;transition:all .15s;user-select:none}
+.chip .chip-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.chip .chip-del{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s;flex-shrink:0;margin-left:2px;color:rgba(0,0,0,0.35)}
+.chip .chip-del:hover{background:rgba(0,0,0,0.1);color:rgba(0,0,0,0.6)}
+.chip-all{background:var(--bg);border-color:var(--border);color:var(--text2)}
+.chip-all.active{background:var(--accent-light);border-color:var(--accent);color:var(--accent)}
+.chip-dataset{background:var(--bg);border-color:var(--border)}
+.chip-dataset.active{border-color:currentColor;background:color-mix(in srgb,currentColor 10%,white)}
+.chip-merge-all{font-size:12px;padding:4px 10px}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:4px;background:var(--card);border-radius:var(--r);padding:5px;box-shadow:var(--shadow);border:1px solid var(--border)}
+.tab{flex:1;text-align:center;padding:8px 4px;border-radius:8px;font-size:13.5px;font-weight:500;cursor:pointer;color:var(--text2);transition:all .15s;user-select:none}
+.tab.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(79,70,229,0.35)}
+.tab:hover:not(.active){background:var(--bg);color:var(--text)}
+
+/* ── CHART AREA ── */
+.tab-panel{display:none}.tab-panel.active{display:contents}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.charts-grid.single{grid-template-columns:1fr}
+.chart-card{background:var(--card);border-radius:var(--r);box-shadow:var(--shadow);border:1px solid var(--border);overflow:hidden}
+.chart-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.chart-title{font-size:13.5px;font-weight:600}
+.chart-subtitle{font-size:11.5px;color:var(--text2);font-weight:400;margin-top:1px}
+.chart-body{padding:16px;position:relative}
+.chart-body canvas{width:100%!important}
+.chart-h{height:260px}
+.chart-h-tall{height:360px}
+.chart-h-leaderboard{height:420px}
+
+/* ── EMPTY STATE ── */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--text2);text-align:center;gap:10px}
+.empty svg{opacity:.3}
+.empty h3{font-size:15px;font-weight:600;color:var(--text);margin-top:4px}
+.empty p{font-size:13.5px;max-width:300px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:720px){.charts-grid{grid-template-columns:1fr}.main{padding:16px 12px}.header{padding:0 16px}.input-row{flex-direction:column;align-items:flex-start}.input-actions{margin-left:0}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    在线用户统计分析
+  </div>
+  <div class="header-actions">
+    <span id="today-badge" style="font-size:12px;color:var(--text2)"></span>
+    <button class="btn btn-secondary btn-sm" onclick="exportAllCharts()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      导出全部图表
+    </button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- INPUT CARD -->
+  <div class="card input-card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">数据录入</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleInput()" id="toggle-input-btn">收起 ▲</button>
+    </div>
+    <div id="input-body" class="card-body">
+      <div class="format-hint">
+        支持三种格式（每行一天，第一列为日期）：<br>
+        逗号：<b>2024-01-15, Alice, Bob, Charlie</b><br>
+        空格：<b>2024-01-15 Alice Bob Charlie</b><br>
+        Tab ：<b>2024-01-15[Tab]Alice[Tab]Bob[Tab]Charlie</b>
+      </div>
+      <textarea id="input-text" placeholder="在此粘贴或手动键入数据&#10;示例：&#10;2024-03-01 Alice Bob Charlie&#10;2024-03-02,Alice,Dave,Eve&#10;（无日期时使用今天日期）"></textarea>
+      <div class="input-row">
+        <div class="input-group">
+          <span class="input-label">数据集：</span>
+          <input type="text" id="dataset-name" placeholder="数据集名称" value="数据集 1" style="width:130px">
+        </div>
+        <div class="input-group">
+          <span class="input-label">方式：</span>
+          <div class="radio-group" id="merge-mode-group">
+            <label class="radio-option active" id="opt-merge">
+              <input type="radio" name="merge-mode" value="merge" checked> 合并到现有
+            </label>
+            <label class="radio-option" id="opt-new">
+              <input type="radio" name="merge-mode" value="new"> 新建表格
+            </label>
+          </div>
+        </div>
+        <div class="input-actions">
+          <button class="btn btn-secondary btn-sm" onclick="loadExample()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            载入示例
+          </button>
+          <button class="btn btn-primary btn-sm" onclick="handleImport()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            导入数据
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHIPS ROW -->
+  <div id="chips-section" style="display:none">
+    <div class="chips-row" id="chips-row">
+      <span class="chips-label">数据集：</span>
+      <!-- chips injected here -->
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div id="tabs-section" style="display:none">
+    <div class="tabs" id="tab-nav">
+      <div class="tab active" data-tab="0" onclick="switchTab(0)">每日趋势</div>
+      <div class="tab" data-tab="1" onclick="switchTab(1)">月度分析</div>
+      <div class="tab" data-tab="2" onclick="switchTab(2)">年度总览</div>
+      <div class="tab" data-tab="3" onclick="switchTab(3)">构成分析</div>
+      <div class="tab" data-tab="4" onclick="switchTab(4)">用户排行</div>
+    </div>
+  </div>
+
+  <!-- CHART PANELS -->
+  <div id="chart-area">
+
+    <!-- TAB 0: 每日 -->
+    <div id="tab-panel-0" class="tab-panel active">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">每日在线人数</div><div class="chart-subtitle">折线图 · 近90天</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-daily-line','每日在线人数')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-daily-line"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">近7日详情</div><div class="chart-subtitle">柱状图 · 最近一周</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-daily-bar','近7日详情')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-daily-bar"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 1: 月度 -->
+    <div id="tab-panel-1" class="tab-panel">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">月均在线人数</div><div class="chart-subtitle">折线图 · 每月平均</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-monthly-line','月均在线人数')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-monthly-line"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">月度活跃用户</div><div class="chart-subtitle">柱状图 · 每月独立用户数</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-monthly-bar','月度活跃用户')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-monthly-bar"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 年度 -->
+    <div id="tab-panel-2" class="tab-panel">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">年度活跃用户</div><div class="chart-subtitle">柱状图 · 每年独立用户数</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-yearly-bar','年度活跃用户')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-yearly-bar"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">年度日均在线</div><div class="chart-subtitle">折线图 · 多年对比</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-yearly-line','年度日均在线')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-yearly-line"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 占比 -->
+    <div id="tab-panel-3" class="tab-panel">
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">用户在线占比</div><div class="chart-subtitle">饼图 · Top 12 用户</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-user-pie','用户在线占比')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-user-pie"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">星期分布</div><div class="chart-subtitle">极坐标图 · 各星期平均在线</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-weekday-polar','星期分布')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h"><canvas id="chart-weekday-polar"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: 排行 -->
+    <div id="tab-panel-4" class="tab-panel">
+      <div class="charts-grid single">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div><div class="chart-title">用户在线天数排行榜</div><div class="chart-subtitle">水平柱状图 · Top 20</div></div>
+            <button class="btn btn-ghost btn-sm" onclick="exportChart('chart-leaderboard','用户排行榜')">导出 JPG</button>
+          </div>
+          <div class="chart-body chart-h-leaderboard"><canvas id="chart-leaderboard"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /#chart-area -->
+
+  <!-- EMPTY STATE -->
+  <div id="empty-state" class="card">
+    <div class="empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      <h3>暂无数据</h3>
+      <p>在上方输入框粘贴服务器在线用户记录，或点击「载入示例」快速体验</p>
+    </div>
+  </div>
+
+</div><!-- /.main -->
+
+<script>
+// ════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════
+const STORAGE_KEY = 'online_stats_v2';
+const PALETTE = [
+  '#4F46E5','#0EA5E9','#10B981','#F59E0B',
+  '#EF4444','#8B5CF6','#F97316','#EC4899',
+  '#14B8A6','#6366F1','#84CC16','#06B6D4'
+];
+const WEEKDAYS = ['周一','周二','周三','周四','周五','周六','周日'];
+const WEEKDAY_COLORS = ['#6366F1','#8B5CF6','#EC4899','#EF4444','#F97316','#F59E0B','#10B981'];
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let state = { datasets: [], activeId: null };
+let activeTab = 0;
+const chartInstances = {};
+
+// ════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════
+function saveState() {
+  const json = JSON.stringify(state);
+  try {
+    localStorage.setItem(STORAGE_KEY, json);
+  } catch(e) {
+    saveToCookies(json);
+  }
+}
+
+function loadState() {
+  try {
+    const ls = localStorage.getItem(STORAGE_KEY);
+    if (ls) return JSON.parse(ls);
+  } catch(e) {}
+  // Try cookies
+  try {
+    const count = parseInt(getCookie('osc') || '0');
+    if (count > 0) {
+      let json = '';
+      for (let i = 0; i < count; i++) json += getCookie('os_'+i) || '';
+      return JSON.parse(json);
+    }
+  } catch(e) {}
+  return { datasets: [], activeId: null };
+}
+
+function saveToCookies(json) {
+  try {
+    const oldCount = parseInt(getCookie('osc') || '0');
+    for (let i = 0; i < oldCount; i++) deleteCookie('os_'+i);
+    const size = 3800;
+    const chunks = [];
+    for (let i = 0; i < json.length; i += size) chunks.push(json.slice(i, i + size));
+    chunks.forEach((c, i) => setCookie('os_'+i, c, 365));
+    setCookie('osc', chunks.length, 365);
+  } catch(e) {}
+}
+
+function setCookie(name, val, days) {
+  const d = new Date(); d.setTime(d.getTime() + days*86400000);
+  document.cookie = `${name}=${encodeURIComponent(val)};expires=${d.toUTCString()};path=/`;
+}
+function getCookie(name) {
+  const m = document.cookie.match(new RegExp('(?:^|; )'+name+'=([^;]*)'));
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function deleteCookie(name) { setCookie(name, '', -1); }
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+function uid() { return Math.random().toString(36).slice(2, 10); }
+
+function parseDate(str) {
+  // Handles YYYY-MM-DD, YYYY/MM/DD, MM/DD/YYYY, MM-DD-YYYY
+  if (!str) return null;
+  str = str.trim();
+  if (/^\d{4}[-\/]\d{2}[-\/]\d{2}$/.test(str)) {
+    return str.replace(/\//g, '-');
+  }
+  if (/^\d{2}[-\/]\d{2}[-\/]\d{4}$/.test(str)) {
+    const parts = str.replace(/\//g, '-').split('-');
+    return `${parts[2]}-${parts[0]}-${parts[1]}`;
+  }
+  return null;
+}
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+
+function parseInput(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const dateMap = {};
+  const today = todayStr();
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    let parts;
+    if (trimmed.includes('\t')) {
+      parts = trimmed.split('\t').map(p => p.trim()).filter(Boolean);
+    } else if (trimmed.includes(',')) {
+      parts = trimmed.split(',').map(p => p.trim()).filter(Boolean);
+    } else {
+      parts = trimmed.split(/\s+/).filter(Boolean);
+    }
+    if (!parts.length) continue;
+    let date = parseDate(parts[0]);
+    let users;
+    if (date) {
+      users = parts.slice(1);
+    } else {
+      // Check if any part looks like a date
+      let found = false;
+      for (let i = 0; i < Math.min(parts.length, 3); i++) {
+        const d = parseDate(parts[i]);
+        if (d) { date = d; users = parts.filter((_,j) => j !== i); found = true; break; }
+      }
+      if (!found) { date = today; users = parts; }
+    }
+    if (!users.length) continue;
+    if (!dateMap[date]) dateMap[date] = new Set();
+    users.forEach(u => { if(u) dateMap[date].add(u); });
+  }
+  const result = {};
+  Object.entries(dateMap).forEach(([d, s]) => { result[d] = [...s]; });
+  return result;
+}
+
+// ════════════════════════════════════════════
+// DATA ANALYSIS
+// ════════════════════════════════════════════
+function getActiveDatasets() {
+  if (!state.datasets.length) return [];
+  if (state.activeId === 'all') {
+    return state.datasets.map((ds, i) => ({
+      name: ds.name,
+      color: PALETTE[i % PALETTE.length],
+      data: ds.data
+    }));
+  }
+  const ds = state.datasets.find(d => d.id === state.activeId);
+  if (!ds) return [];
+  return [{ name: ds.name, color: ds.color, data: ds.data }];
+}
+
+function mergeData(datasets) {
+  // Merge multiple dataset data objects into one
+  const merged = {};
+  datasets.forEach(ds => {
+    Object.entries(ds.data).forEach(([date, users]) => {
+      if (!merged[date]) merged[date] = new Set();
+      users.forEach(u => merged[date].add(u));
+    });
+  });
+  const result = {};
+  Object.entries(merged).forEach(([d, s]) => { result[d] = [...s]; });
+  return result;
+}
+
+function sortedDates(data) { return Object.keys(data).sort(); }
+
+function getDailyCounts(data) {
+  return sortedDates(data).map(d => ({ date: d, count: data[d].length }));
+}
+
+function groupByMonth(data) {
+  const months = {};
+  Object.entries(data).forEach(([date, users]) => {
+    const m = date.slice(0,7);
+    if (!months[m]) months[m] = { days: [], users: new Set() };
+    months[m].days.push(date);
+    users.forEach(u => months[m].users.add(u));
+  });
+  return months;
+}
+
+function groupByYear(data) {
+  const years = {};
+  Object.entries(data).forEach(([date, users]) => {
+    const y = date.slice(0,4);
+    if (!years[y]) years[y] = { days: [], users: new Set() };
+    years[y].days.push(date);
+    users.forEach(u => years[y].users.add(u));
+  });
+  return years;
+}
+
+function getUserFreq(data) {
+  const freq = {};
+  Object.values(data).flat().forEach(u => { freq[u] = (freq[u]||0) + 1; });
+  return freq;
+}
+
+function getWeekdayDist(data) {
+  const cnt = [0,0,0,0,0,0,0]; // Mon-Sun
+  const days = [0,0,0,0,0,0,0];
+  Object.entries(data).forEach(([date, users]) => {
+    const d = new Date(date + 'T12:00:00');
+    const wd = (d.getDay() + 6) % 7; // 0=Mon,6=Sun
+    cnt[wd] += users.length;
+    days[wd]++;
+  });
+  return cnt.map((c, i) => days[i] > 0 ? +(c / days[i]).toFixed(1) : 0);
+}
+
+// ════════════════════════════════════════════
+// CHART HELPERS
+// ════════════════════════════════════════════
+function destroyChart(id) {
+  if (chartInstances[id]) { chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+const baseChartOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { labels: { font: { family: 'Outfit', size: 12 }, boxWidth: 12, padding: 16 } },
+    tooltip: { titleFont: { family: 'Outfit' }, bodyFont: { family: 'Outfit' } }
+  },
+  scales: {
+    x: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Outfit', size: 11 }, color: '#9CA3AF' }, border: { color: '#E5E7EB' } },
+    y: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Outfit', size: 11 }, color: '#9CA3AF' }, border: { color: '#E5E7EB' }, beginAtZero: true }
+  }
+};
+
+function colorWithAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function showEmpty(canvasId, msg='暂无足够数据') {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = '#9CA3AF';
+  ctx.font = '14px Outfit';
+  ctx.textAlign = 'center';
+  ctx.fillText(msg, canvas.width/2, canvas.height/2);
+}
+
+// ════════════════════════════════════════════
+// CHART RENDERERS
+// ════════════════════════════════════════════
+function renderTab0() { // Daily
+  destroyChart('chart-daily-line');
+  destroyChart('chart-daily-bar');
+
+  const dsets = getActiveDatasets();
+  if (!dsets.length) { showEmpty('chart-daily-line'); showEmpty('chart-daily-bar'); return; }
+
+  // Daily line: last 90 days
+  const allDates = [...new Set(dsets.flatMap(ds => sortedDates(ds.data)))].sort();
+  const last90 = allDates.slice(-90);
+
+  if (!last90.length) { showEmpty('chart-daily-line'); showEmpty('chart-daily-bar'); return; }
+
+  const lineDatasets = dsets.map((ds, i) => ({
+    label: ds.name,
+    data: last90.map(d => ds.data[d] ? ds.data[d].length : null),
+    borderColor: ds.color,
+    backgroundColor: colorWithAlpha(ds.color, 0.08),
+    fill: dsets.length === 1,
+    tension: 0.35,
+    pointRadius: last90.length > 30 ? 0 : 3,
+    pointHoverRadius: 5,
+    borderWidth: 2,
+    spanGaps: false
+  }));
+
+  const ctx0 = document.getElementById('chart-daily-line').getContext('2d');
+  chartInstances['chart-daily-line'] = new Chart(ctx0, {
+    type: 'line',
+    data: { labels: last90, datasets: lineDatasets },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } },
+      scales: { ...baseChartOpts.scales, x: { ...baseChartOpts.scales.x, ticks: { ...baseChartOpts.scales.x.ticks, maxTicksLimit: 8, maxRotation: 0 } } }
+    }
+  });
+
+  // 7-day bar
+  const last7 = allDates.slice(-7);
+  const barDatasets = dsets.map((ds, i) => ({
+    label: ds.name,
+    data: last7.map(d => ds.data[d] ? ds.data[d].length : 0),
+    backgroundColor: colorWithAlpha(ds.color, 0.75),
+    borderColor: ds.color,
+    borderWidth: 2,
+    borderRadius: 6
+  }));
+
+  const ctx1 = document.getElementById('chart-daily-bar').getContext('2d');
+  chartInstances['chart-daily-bar'] = new Chart(ctx1, {
+    type: 'bar',
+    data: { labels: last7, datasets: barDatasets },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } }
+    }
+  });
+}
+
+function renderTab1() { // Monthly
+  destroyChart('chart-monthly-line');
+  destroyChart('chart-monthly-bar');
+
+  const dsets = getActiveDatasets();
+  if (!dsets.length) { showEmpty('chart-monthly-line'); showEmpty('chart-monthly-bar'); return; }
+
+  const allMonths = [...new Set(dsets.flatMap(ds => Object.keys(groupByMonth(ds.data))))].sort();
+  if (!allMonths.length) { showEmpty('chart-monthly-line'); showEmpty('chart-monthly-bar'); return; }
+
+  // Monthly line: avg daily count per month
+  const lineDS = dsets.map((ds, i) => {
+    const mg = groupByMonth(ds.data);
+    return {
+      label: ds.name,
+      data: allMonths.map(m => {
+        if (!mg[m]) return null;
+        const days = mg[m].days;
+        const total = days.reduce((s, d) => s + (ds.data[d]?.length || 0), 0);
+        return +(total / days.length).toFixed(1);
+      }),
+      borderColor: ds.color, backgroundColor: colorWithAlpha(ds.color, 0.1),
+      fill: dsets.length === 1, tension: 0.35, borderWidth: 2,
+      pointRadius: allMonths.length > 20 ? 0 : 4, pointHoverRadius: 6, spanGaps: false
+    };
+  });
+
+  const ctx0 = document.getElementById('chart-monthly-line').getContext('2d');
+  chartInstances['chart-monthly-line'] = new Chart(ctx0, {
+    type: 'line',
+    data: { labels: allMonths, datasets: lineDS },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } }
+    }
+  });
+
+  // Monthly bar: unique users per month
+  const barDS = dsets.map((ds, i) => {
+    const mg = groupByMonth(ds.data);
+    return {
+      label: ds.name,
+      data: allMonths.map(m => mg[m] ? mg[m].users.size : 0),
+      backgroundColor: colorWithAlpha(ds.color, 0.7), borderColor: ds.color,
+      borderWidth: 2, borderRadius: 5
+    };
+  });
+
+  const ctx1 = document.getElementById('chart-monthly-bar').getContext('2d');
+  chartInstances['chart-monthly-bar'] = new Chart(ctx1, {
+    type: 'bar',
+    data: { labels: allMonths, datasets: barDS },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } }
+    }
+  });
+}
+
+function renderTab2() { // Yearly
+  destroyChart('chart-yearly-bar');
+  destroyChart('chart-yearly-line');
+
+  const dsets = getActiveDatasets();
+  if (!dsets.length) { showEmpty('chart-yearly-bar'); showEmpty('chart-yearly-line'); return; }
+
+  const allYears = [...new Set(dsets.flatMap(ds => Object.keys(groupByYear(ds.data))))].sort();
+  if (!allYears.length) { showEmpty('chart-yearly-bar'); showEmpty('chart-yearly-line'); return; }
+
+  const barDS = dsets.map((ds, i) => {
+    const gy = groupByYear(ds.data);
+    return {
+      label: ds.name,
+      data: allYears.map(y => gy[y] ? gy[y].users.size : 0),
+      backgroundColor: colorWithAlpha(ds.color, 0.7), borderColor: ds.color,
+      borderWidth: 2, borderRadius: 6
+    };
+  });
+  const ctx0 = document.getElementById('chart-yearly-bar').getContext('2d');
+  chartInstances['chart-yearly-bar'] = new Chart(ctx0, {
+    type: 'bar',
+    data: { labels: allYears, datasets: barDS },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } }
+    }
+  });
+
+  // Yearly line: avg daily count per year
+  const lineDS = dsets.map((ds, i) => {
+    const gy = groupByYear(ds.data);
+    return {
+      label: ds.name,
+      data: allYears.map(y => {
+        if (!gy[y]) return null;
+        const days = gy[y].days;
+        const total = days.reduce((s, d) => s + (ds.data[d]?.length || 0), 0);
+        return +(total / days.length).toFixed(1);
+      }),
+      borderColor: ds.color, backgroundColor: colorWithAlpha(ds.color, 0.1),
+      fill: dsets.length === 1, tension: 0.3, borderWidth: 2,
+      pointRadius: 5, pointHoverRadius: 7, spanGaps: false
+    };
+  });
+  const ctx1 = document.getElementById('chart-yearly-line').getContext('2d');
+  chartInstances['chart-yearly-line'] = new Chart(ctx1, {
+    type: 'line',
+    data: { labels: allYears, datasets: lineDS },
+    options: { ...baseChartOpts,
+      plugins: { ...baseChartOpts.plugins, legend: { ...baseChartOpts.plugins.legend, display: dsets.length > 1 } }
+    }
+  });
+}
+
+function renderTab3() { // Distribution
+  destroyChart('chart-user-pie');
+  destroyChart('chart-weekday-polar');
+
+  const dsets = getActiveDatasets();
+  if (!dsets.length) { showEmpty('chart-user-pie'); showEmpty('chart-weekday-polar'); return; }
+
+  const merged = mergeData(dsets);
+  if (!Object.keys(merged).length) { showEmpty('chart-user-pie'); showEmpty('chart-weekday-polar'); return; }
+
+  // Pie: top 12 users
+  const freq = getUserFreq(merged);
+  const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,12);
+  const others = Object.entries(freq).slice(12).reduce((s,[,v]) => s+v, 0);
+  if (others > 0) sorted.push(['其他', others]);
+
+  const pieColors = sorted.map((_, i) => PALETTE[i % PALETTE.length]);
+  const ctx0 = document.getElementById('chart-user-pie').getContext('2d');
+  chartInstances['chart-user-pie'] = new Chart(ctx0, {
+    type: 'pie',
+    data: {
+      labels: sorted.map(([n]) => n),
+      datasets: [{ data: sorted.map(([,v]) => v), backgroundColor: pieColors, borderColor: '#fff', borderWidth: 2, hoverOffset: 8 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'Outfit', size: 12 }, boxWidth: 12, padding: 12 } },
+        tooltip: { titleFont: { family: 'Outfit' }, bodyFont: { family: 'Outfit' },
+          callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} 天 (${(ctx.parsed/Object.values(freq).reduce((a,b)=>a+b,0)*100).toFixed(1)}%)` } }
+      }
+    }
+  });
+
+  // Polar: weekday
+  const wd = getWeekdayDist(merged);
+  const ctx1 = document.getElementById('chart-weekday-polar').getContext('2d');
+  chartInstances['chart-weekday-polar'] = new Chart(ctx1, {
+    type: 'polarArea',
+    data: {
+      labels: WEEKDAYS,
+      datasets: [{ data: wd, backgroundColor: WEEKDAY_COLORS.map(c => colorWithAlpha(c, 0.7)), borderColor: WEEKDAY_COLORS, borderWidth: 2 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { font: { family: 'Outfit', size: 12 }, boxWidth: 12, padding: 10 } },
+        tooltip: { titleFont: { family: 'Outfit' }, bodyFont: { family: 'Outfit' },
+          callbacks: { label: ctx => ` ${ctx.label}: 平均 ${ctx.parsed.r} 人` } }
+      },
+      scales: { r: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Outfit', size: 10 }, color: '#9CA3AF', backdropColor: 'transparent' } } }
+    }
+  });
+}
+
+function renderTab4() { // Leaderboard
+  destroyChart('chart-leaderboard');
+
+  const dsets = getActiveDatasets();
+  if (!dsets.length) { showEmpty('chart-leaderboard'); return; }
+
+  const merged = mergeData(dsets);
+  const freq = getUserFreq(merged);
+  const sorted = Object.entries(freq).sort((a,b) => b[1]-a[1]).slice(0,20).reverse();
+
+  if (!sorted.length) { showEmpty('chart-leaderboard'); return; }
+
+  const barColors = sorted.map((_, i) => {
+    const pct = i / (sorted.length - 1);
+    return colorWithAlpha(PALETTE[0], 0.35 + pct * 0.65);
+  });
+
+  const ctx = document.getElementById('chart-leaderboard').getContext('2d');
+  chartInstances['chart-leaderboard'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(([n]) => n),
+      datasets: [{ label: '在线天数', data: sorted.map(([,v]) => v), backgroundColor: barColors, borderColor: PALETTE[0], borderWidth: 1.5, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { titleFont: { family: 'Outfit' }, bodyFont: { family: 'Outfit' },
+          callbacks: { label: ctx => ` ${ctx.parsed.x} 天` } }
+      },
+      scales: {
+        x: { grid: { color: '#F3F4F6' }, ticks: { font: { family: 'Outfit', size: 11 }, color: '#9CA3AF' }, border: { color: '#E5E7EB' }, beginAtZero: true },
+        y: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 12 }, color: '#374151' }, border: { color: '#E5E7EB' } }
+      }
+    }
+  });
+}
+
+const tabRenderers = [renderTab0, renderTab1, renderTab2, renderTab3, renderTab4];
+
+function renderCurrentTab() {
+  tabRenderers[activeTab]();
+}
+
+// ════════════════════════════════════════════
+// UI RENDERING
+// ════════════════════════════════════════════
+function renderChips() {
+  const row = document.getElementById('chips-row');
+  const chipsSection = document.getElementById('chips-section');
+  const tabsSection = document.getElementById('tabs-section');
+  const emptyState = document.getElementById('empty-state');
+  const chartArea = document.getElementById('chart-area');
+
+  if (!state.datasets.length) {
+    chipsSection.style.display = 'none';
+    tabsSection.style.display = 'none';
+    emptyState.style.display = '';
+    chartArea.style.display = 'none';
+    return;
+  }
+
+  chipsSection.style.display = '';
+  tabsSection.style.display = '';
+  emptyState.style.display = 'none';
+  chartArea.style.display = '';
+
+  const chips = state.datasets.map((ds, i) => {
+    const isActive = state.activeId === ds.id;
+    const color = ds.color;
+    return `<div class="chip chip-dataset ${isActive ? 'active' : ''}" 
+      style="color:${color};border-color:${isActive ? color : 'var(--border)'};background:${isActive ? colorWithAlphaStr(color,0.1) : 'var(--bg)'}"
+      onclick="setActiveDataset('${ds.id}')">
+      <span class="chip-dot" style="background:${color}"></span>
+      ${esc(ds.name)}
+      <span class="chip-del" onclick="event.stopPropagation();deleteDataset('${ds.id}')">✕</span>
+    </div>`;
+  }).join('');
+
+  const allActive = state.activeId === 'all';
+  const allChip = `<div class="chip chip-all ${allActive ? 'active' : ''}" onclick="setActiveDataset('all')">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    全部合并
+  </div>`;
+
+  row.innerHTML = `<span class="chips-label">数据集：</span>${allChip}${chips}`;
+}
+
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function colorWithAlphaStr(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function updateTabNav() {
+  document.querySelectorAll('#tab-nav .tab').forEach((el, i) => {
+    el.classList.toggle('active', i === activeTab);
+  });
+  document.querySelectorAll('.tab-panel').forEach((el, i) => {
+    el.classList.toggle('active', i === activeTab);
+  });
+}
+
+// ════════════════════════════════════════════
+// ACTIONS
+// ════════════════════════════════════════════
+function handleImport() {
+  const text = document.getElementById('input-text').value.trim();
+  if (!text) { alert('请先输入数据'); return; }
+  const parsed = parseInput(text);
+  if (!Object.keys(parsed).length) { alert('未能解析到有效数据，请检查格式'); return; }
+
+  const mode = document.querySelector('input[name="merge-mode"]:checked').value;
+  const nameInput = document.getElementById('dataset-name').value.trim() || '数据集';
+
+  if (mode === 'merge' && state.activeId && state.activeId !== 'all') {
+    // Merge into active dataset
+    const ds = state.datasets.find(d => d.id === state.activeId);
+    if (ds) {
+      Object.entries(parsed).forEach(([date, users]) => {
+        if (!ds.data[date]) ds.data[date] = [];
+        const set = new Set([...ds.data[date], ...users]);
+        ds.data[date] = [...set];
+      });
+      saveState();
+      renderChips();
+      renderCurrentTab();
+      document.getElementById('input-text').value = '';
+      return;
+    }
+  }
+
+  // New dataset
+  const color = PALETTE[state.datasets.length % PALETTE.length];
+  const ds = { id: uid(), name: nameInput, color, data: parsed };
+  state.datasets.push(ds);
+  state.activeId = ds.id;
+  // Auto-increment next name
+  const match = nameInput.match(/^(.+?)(\s*\d+)$/);
+  const base = match ? match[1].trim() : nameInput;
+  const num = match ? parseInt(match[2]) + 1 : 2;
+  document.getElementById('dataset-name').value = `${base} ${num}`;
+
+  saveState();
+  renderChips();
+  renderCurrentTab();
+  document.getElementById('input-text').value = '';
+}
+
+function loadExample() {
+  const names = ['Alice','Bob','Charlie','Diana','Eve','Frank','Grace','Henry','Iris','Jack','Kate','Leo','Mia','Noah','Olivia','Paul','Quinn','Rose','Sam','Tina'];
+  const lines = [];
+  const today = new Date();
+  for (let i = 89; i >= 0; i--) {
+    const d = new Date(today); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0,10);
+    const count = 5 + Math.floor(Math.random() * 10);
+    const shuffled = [...names].sort(() => Math.random() - 0.5).slice(0, count);
+    lines.push(ds + ' ' + shuffled.join(' '));
+  }
+  document.getElementById('input-text').value = lines.join('\n');
+  document.getElementById('dataset-name').value = '示例数据集';
+  // Switch to new
+  document.getElementById('opt-new').classList.add('active');
+  document.getElementById('opt-merge').classList.remove('active');
+  document.querySelector('#opt-new input').checked = true;
+}
+
+function setActiveDataset(id) {
+  state.activeId = id;
+  saveState();
+  renderChips();
+  renderCurrentTab();
+}
+
+function deleteDataset(id) {
+  if (!confirm('确认删除该数据集？')) return;
+  state.datasets = state.datasets.filter(d => d.id !== id);
+  if (state.activeId === id) {
+    state.activeId = state.datasets.length ? state.datasets[0].id : null;
+  }
+  saveState();
+  renderChips();
+  renderCurrentTab();
+}
+
+function switchTab(idx) {
+  activeTab = idx;
+  updateTabNav();
+  renderCurrentTab();
+}
+
+// ════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════
+function exportChart(canvasId, filename) {
+  const chart = chartInstances[canvasId];
+  if (!chart) { alert('请先切换到该图表标签页以加载图表'); return; }
+  const url = chart.toBase64Image('image/jpeg', 0.95);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename + '.jpg'; a.click();
+}
+
+function exportAllCharts() {
+  const tabNames = ['每日趋势','月度分析','年度总览','构成分析','用户排行'];
+  const allCharts = [
+    ['chart-daily-line','每日在线折线'],['chart-daily-bar','近7日柱状'],
+    ['chart-monthly-line','月均折线'],['chart-monthly-bar','月度柱状'],
+    ['chart-yearly-bar','年度柱状'],['chart-yearly-line','年度折线'],
+    ['chart-user-pie','用户饼图'],['chart-weekday-polar','星期极坐标'],
+    ['chart-leaderboard','用户排行榜']
+  ];
+  // Render all tabs first, then export
+  const origTab = activeTab;
+  let delay = 0;
+  [0,1,2,3,4].forEach(t => {
+    setTimeout(() => {
+      switchTab(t);
+      setTimeout(() => {
+        allCharts.filter(([id]) => document.getElementById(id)).forEach(([id, name]) => {
+          if (chartInstances[id]) exportChart(id, name);
+        });
+        if (t === 4) setTimeout(() => switchTab(origTab), 200);
+      }, 300);
+    }, delay);
+    delay += 600;
+  });
+}
+
+// ════════════════════════════════════════════
+// RADIO GROUP
+// ════════════════════════════════════════════
+function bindEvents() {
+  document.querySelectorAll('.radio-option').forEach(label => {
+    label.addEventListener('click', () => {
+      document.querySelectorAll('.radio-option').forEach(l => l.classList.remove('active'));
+      label.classList.add('active');
+      label.querySelector('input').checked = true;
+    });
+  });
+}
+
+function toggleInput() {
+  const body = document.getElementById('input-body');
+  const btn = document.getElementById('toggle-input-btn');
+  if (body.style.display === 'none') {
+    body.style.display = '';
+    btn.textContent = '收起 ▲';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '展开 ▼';
+  }
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+function init() {
+  // Today badge
+  const now = new Date();
+  document.getElementById('today-badge').textContent = now.toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+
+  // Load state
+  state = loadState();
+  if (!state.datasets) state.datasets = [];
+  if (!state.activeId && state.datasets.length) state.activeId = state.datasets[0].id;
+
+  bindEvents();
+  renderChips();
+  if (state.datasets.length) renderCurrentTab();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
